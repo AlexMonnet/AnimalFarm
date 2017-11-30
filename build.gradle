@@ -1,0 +1,68 @@
+buildscript {
+  ext {
+    company = "logicgate"
+    springBootVersion = "1.5.2.RELEASE"
+  }
+  repositories {
+    mavenCentral()
+  }
+  dependencies {
+    classpath "org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}"
+  }
+}
+
+apply plugin: "application"
+apply plugin: "checkstyle"
+apply plugin: "distribution"
+apply plugin: "idea"
+apply plugin: "java"
+apply plugin: "org.springframework.boot"
+
+group = "com.logicgate"
+version = "1.0.0"
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+jar {
+  baseName = "farm"
+  manifest {
+    attributes 'Implementation-Title': 'LogicGate Farm', 'Implementation-Version': version
+  }
+}
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  compile "com.puppycrawl.tools:checkstyle:7.6"
+  compile "org.springframework.boot:spring-boot-starter-actuator:${springBootVersion}"
+  testCompile "org.springframework.boot:spring-boot-starter-test"
+}
+
+idea {
+  module {
+    inheritOutputDirs = true
+  }
+}
+
+springBoot {
+  mainClass = "com.logicgate.farm.Application"
+  executable = true
+}
+
+bootRepackage {
+  mainClass = "com.logicgate.farm.Application"
+}
+
+checkstyle {
+  configFile = file("${project.rootDir}/checkstyle.xml")
+  toolVersion = "7.6"
+  ignoreFailures = false
+  showViolations = true
+}
+
+task wrapper(type: Wrapper) {
+  gradleVersion = "4.0"
+}
+
