@@ -1,7 +1,7 @@
 buildscript {
   ext {
     company = "logicgate"
-    springBootVersion = "1.5.2.RELEASE"
+    springBootVersion = "2.1.2.RELEASE"
   }
   repositories {
     mavenCentral()
@@ -35,9 +35,13 @@ repositories {
 }
 
 dependencies {
-  compile "com.puppycrawl.tools:checkstyle:7.6"
+  compile "com.h2database:h2:1.4.197"
+  compile "com.puppycrawl.tools:checkstyle:7.8.2"
+  compile "org.apache.commons:commons-lang3:3.8.1"
+  compile "org.slf4j:slf4j-api:1.7.25"
   compile "org.springframework.boot:spring-boot-starter-actuator:${springBootVersion}"
-  testCompile "org.springframework.boot:spring-boot-starter-test"
+  compile "org.springframework.boot:spring-boot-starter-data-jpa:${springBootVersion}"
+  testCompile "org.springframework.boot:spring-boot-starter-test:${springBootVersion}"
 }
 
 idea {
@@ -46,23 +50,15 @@ idea {
   }
 }
 
-springBoot {
-  mainClass = "com.logicgate.farm.Application"
-  executable = true
-}
-
-bootRepackage {
-  mainClass = "com.logicgate.farm.Application"
-}
+mainClassName = "com.logicgate.farm.Application"
 
 checkstyle {
   configFile = file("${project.rootDir}/checkstyle.xml")
-  toolVersion = "7.6"
+  toolVersion = "7.8.2"
   ignoreFailures = false
   showViolations = true
 }
 
-task wrapper(type: Wrapper) {
-  gradleVersion = "4.0"
+wrapper {
+  gradleVersion = "4.10"
 }
-
