@@ -6,10 +6,12 @@ import com.logicgate.farm.repository.BarnRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
+@Transactional
 public class AnimalServiceImpl implements AnimalService {
 
   private final AnimalRepository animalRepository;
@@ -20,6 +22,17 @@ public class AnimalServiceImpl implements AnimalService {
   public AnimalServiceImpl(AnimalRepository animalRepository, BarnRepository barnRepository) {
     this.animalRepository = animalRepository;
     this.barnRepository = barnRepository;
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<Animal> findAll() {
+    return animalRepository.findAll();
+  }
+
+  @Override
+  public void deleteAll() {
+    animalRepository.deleteAll();
   }
 
   @Override
@@ -42,15 +55,4 @@ public class AnimalServiceImpl implements AnimalService {
   public void removeFromFarm(List<Animal> animals) {
     animals.forEach(animal -> removeFromFarm(animalRepository.getOne(animal.getId())));
   }
-
-  @Override
-  public List<Animal> findAll() {
-    return animalRepository.findAll();
-  }
-
-  @Override
-  public void deleteAll() {
-    animalRepository.deleteAll();
-  }
-
 }

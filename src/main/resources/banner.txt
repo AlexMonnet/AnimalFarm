@@ -28,5 +28,5 @@ ${AnsiColor.RED}     ░  ░    ░ ░       ░  ░  ░ ░            ░ 
                             ░
 ${AnsiColor.BLUE}███████████████████████████████████████████████████████████████████████
 ${AnsiColor.GREEN}           ::  LogicGate Farm  :: (v1.0.1.RELEASE) ::
-${AnsiColor.CYAN}            ::    Spring Boot   ::${spring-boot.formatted-version} ::
+${AnsiColor.CYAN}           ::    Spring Boot   ::${spring-boot.formatted-version} ::
 ${AnsiColor.BLUE}███████████████████████████████████████████████████████████████████████
