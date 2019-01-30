@@ -12,6 +12,18 @@ import java.util.List;
 public interface AnimalService {
 
   /**
+   * This method is already implemented. It will return every animal in the database.
+   *
+   * @return every animal in the database
+   */
+  List<Animal> findAll();
+
+  /**
+   * This method is already implemented. It will remove all animals from the database.
+   */
+  void deleteAll();
+
+  /**
    * <p>
    * An animal moves to the farm. The new animal must have a barn to inhabitate and the barn must match the animal's
    * favorite color. If no such barn exists, then a new barn must be built to accomodate the animal. When a new barn is
@@ -112,17 +124,5 @@ public interface AnimalService {
    * @param animals the sad friends who are moving away
    */
   void removeFromFarm(List<Animal> animals);
-
-  /**
-   * This method is already implemented. It will return every animal in the database.
-   *
-   * @return every animal in the database
-   */
-  List<Animal> findAll();
-
-  /**
-   * This method is already implemented. It will remove all animals from the database.
-   */
-  void deleteAll();
 
 }
