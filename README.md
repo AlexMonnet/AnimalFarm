@@ -18,7 +18,7 @@ next to the interface and lined with TODOs. In addition to adding code to the se
 additional methods to both the `FarmRepository` and `AnimalRepository` which can be located at
 `com.logicgate.farm.repository`. While the service implementation can be completed successfully without doing so
 and relying exclusively on the repositories' inherited methods (e.g. `findAll()`, `getOne()`, `save()`, and `delete()`)
-your solution may be cleaner and/or more efficient by adding repository methods.
+your solution may be cleaner and/or more efficient by adding repository methods. Your solution should not need any type of nested iteration. 
 
 
 ### Rules and Testing
@@ -30,6 +30,9 @@ validate your solution. If you're stuck or confused about any of the requirement
 as a means to "work backwards" to a solution. To run the tests, simply execute `./gradlew cleanTest test` from the 
 project root.
 
+_You must:_
+- use streams
+
 _You may:_
 
 - add any additional methods or classes to project files
@@ -38,6 +41,7 @@ _You may:_
 _You may not:_
 
 - modify entity classes
+- reformat the files 
 
 
 ### Summary
