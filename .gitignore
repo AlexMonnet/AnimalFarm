@@ -9,3 +9,6 @@ hs_err_pid*
 *.iml
 *.env
 
+.classpath
+.project
+org.eclipse.buildship.*
