@@ -94,13 +94,11 @@ public class AnimalServiceImpl implements AnimalService {
       List<Barn> barnsToRemove = new ArrayList<>();
 
       //Adjust the number of barns to fit the minimum necessary
-      if(barns.size() < necessaryNumberOfBarns){
-        Integer barnNumbering = barns.size() - 1;
-        while (barns.size() < necessaryNumberOfBarns){
-          barns.add(barnRepository.saveAndFlush(new Barn("Barn " + barnColor.toString() + " " + barnNumbering.toString(), barnColor)));
-          barnNumbering++;
-        }
-      } else if (barns.size() > necessaryNumberOfBarns){
+      while (barns.size() < necessaryNumberOfBarns){
+        barns.add(barnRepository.saveAndFlush(new Barn("Barn " + barnColor.toString(), barnColor)));
+      }
+
+      if (barns.size() > necessaryNumberOfBarns){
         barns.sort((Barn b1, Barn b2) -> b1.getName().compareTo(b2.getName()));
         barnsToRemove = barns.subList(necessaryNumberOfBarns, barns.size());
       }
