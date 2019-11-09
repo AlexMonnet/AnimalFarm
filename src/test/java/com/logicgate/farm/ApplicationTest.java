@@ -78,7 +78,7 @@ public class ApplicationTest {
         .collect(Collectors.groupingBy(Animal::getBarn));
 
     barnAnimalMap.forEach((barn, animals) -> {
-      assertThat("Barns should not exceed capacity.", barn.getCapacity(), greaterThanOrEqualTo(animals.size()));
+      assertThat("Barns should not exceed capacity.",animals.size() , lessThanOrEqualTo(barn.getCapacity()));
       assertThat("Animals should match the barn color.",
           animals.stream().anyMatch(animal -> animal.getFavoriteColor() != barn.getColor()), is(false));
     });
