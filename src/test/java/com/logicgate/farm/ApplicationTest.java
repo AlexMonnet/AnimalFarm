@@ -23,7 +23,7 @@ import java.util.stream.IntStream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 
@@ -32,6 +32,7 @@ import static org.hamcrest.Matchers.lessThanOrEqualTo;
 public class ApplicationTest {
 
   private static final int ANIMAL_SEED = 1000;
+  private static final int LARGE_DATA_MULTIPLIER = 6;
 
   @Autowired
   private BarnRepository barnRepository;
@@ -78,7 +79,7 @@ public class ApplicationTest {
         .collect(Collectors.groupingBy(Animal::getBarn));
 
     barnAnimalMap.forEach((barn, animals) -> {
-      assertThat("Barns should not exceed capacity.",animals.size() , lessThanOrEqualTo(barn.getCapacity()));
+      assertThat("Barns should not exceed capacity.", animals.size(), lessThanOrEqualTo(barn.getCapacity()));
       assertThat("Animals should match the barn color.",
           animals.stream().anyMatch(animal -> animal.getFavoriteColor() != barn.getColor()), is(false));
     });
@@ -102,11 +103,46 @@ public class ApplicationTest {
           .mapToInt(i -> i)
           .sum();
 
+      try {
       assertThat("Optimal barns should exist for capacity requirements.",
-          minCapacity, greaterThan(totalUnusedCapacity));
+          totalUnusedCapacity, lessThan(minCapacity));
       assertThat("Animal distribution should maximize free barn space.",
           Collections.max(unusedCapacity) - Collections.min(unusedCapacity), lessThanOrEqualTo(1));
+      } catch(AssertionError e){
+        System.err.println(e);
+        System.err.println("______________________________________");
+        barns.forEach(barn -> {
+          System.err.println(barn.getColor()+ " : " + barnAnimalMap.get(barn).size());
+        });
+        System.err.println("______________________________________");
+        throw e;
+      }
     });
   }
 
+  @Test
+  public void addAnimalsToFarm_LargeNumberOfAnimals() {
+
+    animalService.addToFarm(IntStream.range(0, ANIMAL_SEED * LARGE_DATA_MULTIPLIER)
+        .mapToObj(value -> new Animal(FarmUtils.animalName(value), FarmUtils.randomColor()))
+        .collect(Collectors.toList()));
+
+    checkAnimals(ANIMAL_SEED * LARGE_DATA_MULTIPLIER);
+  }
+
+  @Test
+  public void removeAnimalsFromFarm_LargeNumberOfAnimals() {
+    animalService.addToFarm(IntStream.range(0, ANIMAL_SEED * LARGE_DATA_MULTIPLIER)
+        .mapToObj(value -> new Animal(FarmUtils.animalName(value), FarmUtils.randomColor()))
+        .collect(Collectors.toList()));
+
+    List<Animal> animals = animalService.findAll();
+    List<Animal> animalsToRemove = animals.stream()
+        .filter(animal -> ThreadLocalRandom.current().nextBoolean())
+        .collect(Collectors.toList());
+
+    animalService.removeFromFarm(animalsToRemove);
+
+    checkAnimals(animals.size() - animalsToRemove.size());
+  }
 }
