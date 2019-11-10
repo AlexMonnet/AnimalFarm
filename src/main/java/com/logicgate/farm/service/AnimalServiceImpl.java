@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -143,12 +144,12 @@ public class AnimalServiceImpl implements AnimalService {
    */
   private int findNecessaryNumberOfBarns(final int barnCapacity, final int numberOfAnimals) {
     int numberOfBarns = numberOfAnimals / barnCapacity;
-
-    //If there was any remainder from the integer division, bump the number of barns by 1 since integer division rounds down
-    if (numberOfAnimals % barnCapacity != 0)
+    int remainderOfAnimals = numberOfAnimals % barnCapacity;
+    if (remainderOfAnimals > 0)
     {
       numberOfBarns++;
     }
+
     return numberOfBarns;
   }
 
@@ -164,28 +165,16 @@ public class AnimalServiceImpl implements AnimalService {
     doBarnsNeedToBeBalanced = true;
    } else {
     final int barnCapacity = barns.get(0).getCapacity();
-    final Map<Barn, Integer> barnSizeMap = new HashMap<>();
+    final Map<Barn, List<Animal>> barnToAnimalMap = animals.stream().collect(Collectors.groupingBy(Animal::getBarn));
 
-    animals.forEach(animal -> {
-      Barn animalBarn = animal.getBarn();
-      Integer barnSize = barnSizeMap.get(animalBarn);
-      if (barnSize == null) {
-        barnSize = 0;
-      }
+    final Integer minNumberOfAnimalsInABarn = barnToAnimalMap.values().stream().mapToInt(animalList -> animalList.size()).min().orElse(0);
+    final Integer maxNumberOfAnimalsInABarn = barnToAnimalMap.values().stream().mapToInt(animalList -> animalList.size()).max().orElse(Integer.MAX_VALUE);
+    final Integer sumNumberOfAnimalsInABarn = barnToAnimalMap.values().stream().mapToInt(animalList -> animalList.size()).sum();
+    final Integer freeSpaceInAllBarns       = (barnCapacity * barnToAnimalMap.size()) - sumNumberOfAnimalsInABarn;
 
-      barnSizeMap.put(animalBarn, barnSize + 1);
-    });
-
-    Integer minNumberOfAnimalsInABarn = barnSizeMap.values().stream().mapToInt(integer -> integer).min().orElse(0);
-    Integer maxNumberOfAnimalsInABarn = barnSizeMap.values().stream().mapToInt(integer -> integer).max().orElse(Integer.MAX_VALUE);
-    Integer sumNumberOfAnimalsInABarn = barnSizeMap.values().stream().mapToInt(integer -> integer).sum();
-    Integer freeSpaceInAllBarns       = (barnCapacity * barnSizeMap.size()) - sumNumberOfAnimalsInABarn;
-
-    if(maxNumberOfAnimalsInABarn - minNumberOfAnimalsInABarn > 1 ||
-        maxNumberOfAnimalsInABarn > barnCapacity ||
-        freeSpaceInAllBarns >= barnCapacity) {
-      doBarnsNeedToBeBalanced = true;
-    }
+    doBarnsNeedToBeBalanced = (maxNumberOfAnimalsInABarn - minNumberOfAnimalsInABarn > 1 ||
+                                maxNumberOfAnimalsInABarn > barnCapacity ||
+                                freeSpaceInAllBarns >= barnCapacity);
    }
 
    return doBarnsNeedToBeBalanced;
