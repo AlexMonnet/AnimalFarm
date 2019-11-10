@@ -7,16 +7,14 @@ import com.logicgate.farm.repository.AnimalRepository;
 import com.logicgate.farm.repository.BarnRepository;
 import com.zaxxer.hikari.util.ConcurrentBag;
 
-import org.h2.mvstore.ConcurrentArrayList;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.ArrayList;
-import java.util.concurrent.ConcurrentHashMap;
-
-import javax.management.RuntimeErrorException;
 
 @Service
 @Transactional
@@ -73,10 +71,10 @@ public class AnimalServiceImpl implements AnimalService {
   }
 
   /**
-   * This method redistributes all animals into barns
-   * @param barnColor
+   * This method redistributes all animals into barns.
+   * @param barnColor The color of barns to redistribute the animals into
    */
-  private void redistributeAnimalsOfBarnColor(Color barnColor) {
+  private void redistributeAnimalsOfBarnColor(final Color barnColor) {
     final List<Barn> barns = barnRepository.findByColor(barnColor);
     final List<Animal> animals = animalRepository.findByFavoriteColor(barnColor);
 
@@ -91,20 +89,15 @@ public class AnimalServiceImpl implements AnimalService {
 
       final int barnCapacity = barns.get(0).getCapacity();
       final int necessaryNumberOfBarns = findNecessaryNumberOfBarns(barnCapacity, animals.size());
-
-      //Adjust the number of barns to fit the minimum necessary
       final List<Barn> availableBarns = adjustNumberOfBarns(necessaryNumberOfBarns, barns, barnColor);
 
       //Once the proper number of barns are established, we redistribute the animals.
       int iterator = 0;
       for (Animal animal : animals){
-        int barnToAddTo = iterator % necessaryNumberOfBarns;
-        Barn animalsBarn = availableBarns.get(barnToAddTo);
+        Barn animalsBarn = availableBarns.get(iterator % necessaryNumberOfBarns);
         animal.setBarn(animalsBarn);
         iterator++;
       }
-
-      //Once the animals are put into new barns, remove any unused ones.
     }
   }
 
@@ -114,24 +107,32 @@ public class AnimalServiceImpl implements AnimalService {
    * @param numberOfBarns number of barns to scale to
    * @return Newly adjusted list of Barns
    */
-  private List<Barn> adjustNumberOfBarns(final int numberOfBarns, List<Barn> existingBarns, Color barnColor){
+  private List<Barn> adjustNumberOfBarns(final int numberOfBarns, final List<Barn> existingBarns, final Color barnColor){
+    //Make a copy of the parameter so that we don't alter it via this function as curated list is this function's output
     final List<Barn> adjustedBarnList = new ArrayList<>(existingBarns);
     while (adjustedBarnList.size() < numberOfBarns){
       adjustedBarnList.add(barnRepository.saveAndFlush(new Barn("Barn " + barnColor.toString(), barnColor)));
     }
 
     if (adjustedBarnList.size() > numberOfBarns){
-      adjustedBarnList.sort((Barn b1, Barn b2) -> b1.getName().compareTo(b2.getName()));
-      adjustedBarnList.subList(numberOfBarns, adjustedBarnList.size()).forEach(barnRepository::delete);
+      adjustedBarnList.subList(numberOfBarns, adjustedBarnList.size())
+      .forEach(barnRepository::delete);
     }
 
     return adjustedBarnList;
   }
 
+  /**
+   * This method returns the minimum number of barns required to house
+   * all of the animals.
+   * @param barnCapacity The number of animals that can be housed in a barn
+   * @param numberOfAnimals The number of animals to house
+   * @return The minimum number of barns to house all animals within the capacity of each barn
+   */
   private int findNecessaryNumberOfBarns(final int barnCapacity, final int numberOfAnimals) {
     int numberOfBarns = numberOfAnimals / barnCapacity;
 
-    //If there was any remainder from the integer division, bump the number of barns by 1
+    //If there was any remainder from the integer division, bump the number of barns by 1 since integer division rounds down
     if (numberOfAnimals % barnCapacity != 0)
     {
       numberOfBarns++;
