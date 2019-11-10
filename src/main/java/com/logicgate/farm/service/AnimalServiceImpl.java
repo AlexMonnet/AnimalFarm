@@ -5,16 +5,15 @@ import com.logicgate.farm.domain.Barn;
 import com.logicgate.farm.domain.Color;
 import com.logicgate.farm.repository.AnimalRepository;
 import com.logicgate.farm.repository.BarnRepository;
-import com.zaxxer.hikari.util.ConcurrentBag;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.Map;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 @Service
 @Transactional
@@ -51,6 +50,7 @@ public class AnimalServiceImpl implements AnimalService {
     // animal.setBarn(barns.get(0));
     animalRepository.saveAndFlush(animal);
     redistributeAnimalsOfBarnColor(animal.getFavoriteColor());
+
     return animal;
   }
 
@@ -62,7 +62,13 @@ public class AnimalServiceImpl implements AnimalService {
   @Override
   public void removeFromFarm(Animal animal) {
     animalRepository.delete(animal);
-    redistributeAnimalsOfBarnColor(animal.getFavoriteColor());
+
+    final Color barnColor = animal.getFavoriteColor();
+    final List<Barn> barns = barnRepository.findByColor(barnColor);
+    final List<Animal> animals = animalRepository.findByFavoriteColor(barnColor);
+    if(doBarnsNeedToBeBalanced(barns, animals)){
+      redistributeAnimalsOfBarnColor(animal.getFavoriteColor(), barns, animals);
+    }
   }
 
   @Override
@@ -78,6 +84,16 @@ public class AnimalServiceImpl implements AnimalService {
     final List<Barn> barns = barnRepository.findByColor(barnColor);
     final List<Animal> animals = animalRepository.findByFavoriteColor(barnColor);
 
+    redistributeAnimalsOfBarnColor(barnColor, barns, animals);
+  }
+
+    /**
+   * This method redistributes all animals into barns.
+   * @param barnColor The color of barns to redistribute the animals into
+   * @param barns The list of barns with the same color as barnColor
+   * @param animals The list of animals with the same favorite color as barnColor
+   */
+  private void redistributeAnimalsOfBarnColor(final Color barnColor, final List<Barn> barns, final List<Animal> animals) {
     //If there are no animals, clear out the barns
     if(animals.size() == 0){
       barnRepository.deleteAll(barns);
@@ -98,11 +114,14 @@ public class AnimalServiceImpl implements AnimalService {
         animal.setBarn(animalsBarn);
         iterator++;
       }
+
+      animalRepository.saveAll(animals);
     }
   }
 
+
   /**
-   * This method adjsuts the current number of barns to match the number
+   * This method adjusts the current number of barns to match the number
    *  specified via the parameter numberOfBarns
    * @param numberOfBarns number of barns to scale to
    * @return Newly adjusted list of Barns
@@ -139,4 +158,52 @@ public class AnimalServiceImpl implements AnimalService {
     }
     return numberOfBarns;
   }
+
+  /**
+  * This method returns a boolean indicating whether or not
+  *  the animals need to be redistributed amongst the barns
+  * @param barns
+  * @return
+  */
+ private boolean doBarnsNeedToBeBalanced(List<Barn> barns, List<Animal> animals) {
+   boolean doBarnsNeedToBeBalanced = false;
+   if(barns.size() == 0 && animals.size() != 0) {
+    doBarnsNeedToBeBalanced = true;
+   } else {
+    int maxNumberOfAnimalsInABarn = 0;
+    int minNumberOfAnimalsInABarn = Integer.MAX_VALUE;
+    int freeSpaceInAllBarns = 0;
+    final int barnCapacity = barns.get(0).getCapacity();
+
+
+    final Map<Barn, Integer> barnSizeMap = new HashMap<>();
+
+    animals.forEach(animal -> {
+      Barn animalBarn = animal.getBarn();
+      Integer barnSize = barnSizeMap.get(animalBarn);
+      if (barnSize == null) {
+        barnSize = 0;
+      }
+
+      barnSizeMap.put(animalBarn, barnSize + 1);
+    });
+
+    for(Integer barnSize: barnSizeMap.values()) {
+      maxNumberOfAnimalsInABarn = Math.max(maxNumberOfAnimalsInABarn, barnSize);
+      minNumberOfAnimalsInABarn = Math.min(minNumberOfAnimalsInABarn, barnSize);
+      freeSpaceInAllBarns += barnCapacity - barnSize;
+      if(maxNumberOfAnimalsInABarn - minNumberOfAnimalsInABarn > 1 ||
+          maxNumberOfAnimalsInABarn > barnCapacity ||
+          freeSpaceInAllBarns >= barnCapacity) {
+
+        doBarnsNeedToBeBalanced = true;
+        break;
+      }
+    };
+   }
+
+   return doBarnsNeedToBeBalanced;
+ }
+
+
 }
