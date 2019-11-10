@@ -91,30 +91,41 @@ public class AnimalServiceImpl implements AnimalService {
 
       final int barnCapacity = barns.get(0).getCapacity();
       final int necessaryNumberOfBarns = findNecessaryNumberOfBarns(barnCapacity, animals.size());
-      List<Barn> barnsToRemove = new ArrayList<>();
 
       //Adjust the number of barns to fit the minimum necessary
-      while (barns.size() < necessaryNumberOfBarns){
-        barns.add(barnRepository.saveAndFlush(new Barn("Barn " + barnColor.toString(), barnColor)));
-      }
-
-      if (barns.size() > necessaryNumberOfBarns){
-        barns.sort((Barn b1, Barn b2) -> b1.getName().compareTo(b2.getName()));
-        barnsToRemove = barns.subList(necessaryNumberOfBarns, barns.size());
-      }
+      final List<Barn> availableBarns = adjustNumberOfBarns(necessaryNumberOfBarns, barns, barnColor);
 
       //Once the proper number of barns are established, we redistribute the animals.
       int iterator = 0;
       for (Animal animal : animals){
         int barnToAddTo = iterator % necessaryNumberOfBarns;
-        Barn animalsBarn = barns.get(barnToAddTo);
+        Barn animalsBarn = availableBarns.get(barnToAddTo);
         animal.setBarn(animalsBarn);
         iterator++;
       }
 
       //Once the animals are put into new barns, remove any unused ones.
-      barnsToRemove.stream().forEach(barnRepository::delete);
     }
+  }
+
+  /**
+   * This method adjsuts the current number of barns to match the number
+   *  specified via the parameter numberOfBarns
+   * @param numberOfBarns number of barns to scale to
+   * @return Newly adjusted list of Barns
+   */
+  private List<Barn> adjustNumberOfBarns(final int numberOfBarns, List<Barn> existingBarns, Color barnColor){
+    final List<Barn> adjustedBarnList = new ArrayList<>(existingBarns);
+    while (adjustedBarnList.size() < numberOfBarns){
+      adjustedBarnList.add(barnRepository.saveAndFlush(new Barn("Barn " + barnColor.toString(), barnColor)));
+    }
+
+    if (adjustedBarnList.size() > numberOfBarns){
+      adjustedBarnList.sort((Barn b1, Barn b2) -> b1.getName().compareTo(b2.getName()));
+      adjustedBarnList.subList(numberOfBarns, adjustedBarnList.size()).forEach(barnRepository::delete);
+    }
+
+    return adjustedBarnList;
   }
 
   private int findNecessaryNumberOfBarns(final int barnCapacity, final int numberOfAnimals) {
