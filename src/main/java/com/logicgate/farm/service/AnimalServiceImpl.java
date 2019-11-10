@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -42,15 +43,8 @@ public class AnimalServiceImpl implements AnimalService {
 
   @Override
   public Animal addToFarm(Animal animal) {
-    // List<Barn> barns = barnRepository.findByColor(animal.getFavoriteColor());
-    // Color barnColor = animal.getFavoriteColor();
-    // if(barns.size() == 0){
-    //  barns.add(barnRepository.saveAndFlush(new Barn("Barn " + barnColor.toString(), barnColor)));
-    // }
-    // animal.setBarn(barns.get(0));
     animalRepository.saveAndFlush(animal);
     redistributeAnimalsOfBarnColor(animal.getFavoriteColor());
-
     return animal;
   }
 
