@@ -13,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -61,7 +60,7 @@ public class AnimalServiceImpl implements AnimalService {
     final List<Barn> barns = barnRepository.findByColor(barnColor);
     final List<Animal> animals = animalRepository.findByFavoriteColor(barnColor);
     if(doBarnsNeedToBeBalanced(barns, animals)){
-      redistributeAnimalsOfBarnColor(animal.getFavoriteColor(), barns, animals);
+      redistributeAnimalsOfBarnColor(barnColor, barns, animals);
     }
   }
 
@@ -121,7 +120,7 @@ public class AnimalServiceImpl implements AnimalService {
    * @return Newly adjusted list of Barns
    */
   private List<Barn> adjustNumberOfBarns(final int numberOfBarns, final List<Barn> existingBarns, final Color barnColor){
-    //Make a copy of the parameter so that we don't alter it via this function as curated list is this function's output
+    //Make a copy of the parameter so that we don't alter it via this function as the altered list is this function's output
     final List<Barn> adjustedBarnList = new ArrayList<>(existingBarns);
     while (adjustedBarnList.size() < numberOfBarns){
       adjustedBarnList.add(barnRepository.saveAndFlush(new Barn("Barn " + barnColor.toString(), barnColor)));
@@ -129,7 +128,7 @@ public class AnimalServiceImpl implements AnimalService {
 
     if (adjustedBarnList.size() > numberOfBarns){
       adjustedBarnList.subList(numberOfBarns, adjustedBarnList.size())
-      .forEach(barnRepository::delete);
+        .forEach(barnRepository::delete);
     }
 
     return adjustedBarnList;
