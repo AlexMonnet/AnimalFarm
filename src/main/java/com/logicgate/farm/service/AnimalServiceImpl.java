@@ -10,8 +10,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 
@@ -42,8 +44,20 @@ public class AnimalServiceImpl implements AnimalService {
 
   @Override
   public Animal addToFarm(Animal animal) {
+
+    final Color barnColor = animal.getFavoriteColor();
+    final List<Barn> barns = barnRepository.findByColor(barnColor);
+    final List<Animal> animals = animalRepository.findByFavoriteColor(barnColor);
+
+
     animalRepository.saveAndFlush(animal);
-    redistributeAnimalsOfBarnColor(animal.getFavoriteColor());
+    if(barns.size() == 0){
+      barns.add(barnRepository.saveAndFlush(new Barn("Barn " + barnColor.toString() + " 0", barnColor)));
+    }
+    animal.setBarn(barns.get(0));
+
+    animals.add(animal);
+    redistributeAnimalsOfBarnColor(barnColor, barns, animals);
     return animal;
   }
 
@@ -55,13 +69,7 @@ public class AnimalServiceImpl implements AnimalService {
   @Override
   public void removeFromFarm(Animal animal) {
     animalRepository.delete(animal);
-
-    final Color barnColor = animal.getFavoriteColor();
-    final List<Barn> barns = barnRepository.findByColor(barnColor);
-    final List<Animal> animals = animalRepository.findByFavoriteColor(barnColor);
-    if(doBarnsNeedToBeBalanced(barns, animals)){
-      redistributeAnimalsOfBarnColor(barnColor, barns, animals);
-    }
+    redistributeAnimalsOfBarnColor(animal.getFavoriteColor());
   }
 
   @Override
@@ -98,40 +106,54 @@ public class AnimalServiceImpl implements AnimalService {
 
       final int barnCapacity = barns.get(0).getCapacity();
       final int necessaryNumberOfBarns = findNecessaryNumberOfBarns(barnCapacity, animals.size());
-      final List<Barn> availableBarns = adjustNumberOfBarns(necessaryNumberOfBarns, barns, barnColor);
+      final Map<Barn, List<Animal>> barnToAnimalRelationMap = animals.stream()
+      .collect(Collectors.groupingBy(Animal::getBarn));
+      final int animalsPerBarn = animals.size() / necessaryNumberOfBarns;
+      final int remainderAnimals = animals.size() % necessaryNumberOfBarns;
+      List<Animal> animalsToRehome = Collections.synchronizedList(new ArrayList<>());
 
-      //Once the proper number of barns are established, we redistribute the animals.
-      int iterator = 0;
-      for (Animal animal : animals){
-        Barn animalsBarn = availableBarns.get(iterator % necessaryNumberOfBarns);
-        animal.setBarn(animalsBarn);
-        iterator++;
+      //Adjust the number of barns
+      while (barnToAnimalRelationMap.size() < necessaryNumberOfBarns){
+        barnToAnimalRelationMap.put(barnRepository.saveAndFlush(new Barn("Barn " + barnColor.toString(), barnColor)), new ArrayList<>());
       }
 
-      animalRepository.saveAll(animals);
+      if (barnToAnimalRelationMap.size() > necessaryNumberOfBarns){
+        List<Barn> barnsToDelete = new ArrayList<>(barnToAnimalRelationMap.keySet()).subList(necessaryNumberOfBarns, barnToAnimalRelationMap.size());
+        barnsToDelete.forEach(barn -> {
+            barnRepository.delete(barn);
+            animalsToRehome.addAll(barnToAnimalRelationMap.get(barn));
+            barnToAnimalRelationMap.remove(barn);
+          });
+      }
+
+      //Once the proper number of barns are established, we redistribute the animals.
+      List<Barn> barnsWithTooManyAnimals = barnToAnimalRelationMap.entrySet().stream().filter((entry) -> { return (entry.getValue().size() > animalsPerBarn); }).map(entry -> entry.getKey()).collect(Collectors.toList());
+      List<Barn> barnsWithTooFewAnimals  = barnToAnimalRelationMap.entrySet().stream().filter((entry) -> { return (entry.getValue().size() < animalsPerBarn); }).map(entry -> entry.getKey()).collect(Collectors.toList());
+
+      for(Barn barn : barnsWithTooManyAnimals){
+          final List<Animal> animalsInBarn = barnToAnimalRelationMap.get(barn);
+          final List<Animal> overflowAnimals = animalsInBarn.subList(animalsPerBarn, animalsInBarn.size());
+          animalsToRehome.addAll(overflowAnimals);
+      }
+
+      for(Barn barn : barnsWithTooFewAnimals){
+          final List<Animal> animalsInBarn = barnToAnimalRelationMap.get(barn);
+          final List<Animal> newAnimals = animalsToRehome.subList(0, animalsPerBarn - animalsInBarn.size());
+          newAnimals.forEach(animal -> { animal.setBarn(barn); });
+          animalsInBarn.addAll(newAnimals);
+          //Save all of the animals added to this barn in this foreach
+          animalRepository.saveAll(newAnimals);
+          animalsToRehome.removeAll(newAnimals);
+      }
+
+      List<Barn> barnsForRemainingAnimals = new ArrayList<>(barnToAnimalRelationMap.keySet()).subList(0, remainderAnimals);
+      for(Barn barn : barnsForRemainingAnimals){
+          animalsToRehome.get(barnsForRemainingAnimals.indexOf(barn)).setBarn(barn);
+      }
+
+      //Save the animals that got a home due to being remainders.
+      animalRepository.saveAll(animalsToRehome);
     }
-  }
-
-
-  /**
-   * This method adjusts the current number of barns to match the number
-   *  specified via the parameter numberOfBarns
-   * @param numberOfBarns number of barns to scale to
-   * @return Newly adjusted list of Barns
-   */
-  private List<Barn> adjustNumberOfBarns(final int numberOfBarns, final List<Barn> existingBarns, final Color barnColor){
-    //Make a copy of the parameter so that we don't alter it via this function as the altered list is this function's output
-    final List<Barn> adjustedBarnList = new ArrayList<>(existingBarns);
-    while (adjustedBarnList.size() < numberOfBarns){
-      adjustedBarnList.add(barnRepository.saveAndFlush(new Barn("Barn " + barnColor.toString(), barnColor)));
-    }
-
-    if (adjustedBarnList.size() > numberOfBarns){
-      adjustedBarnList.subList(numberOfBarns, adjustedBarnList.size())
-        .forEach(barnRepository::delete);
-    }
-
-    return adjustedBarnList;
   }
 
   /**
