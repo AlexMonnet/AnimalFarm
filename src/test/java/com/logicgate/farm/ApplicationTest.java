@@ -1,6 +1,5 @@
 package com.logicgate.farm;
 
-
 import com.logicgate.farm.domain.Animal;
 import com.logicgate.farm.domain.Barn;
 import com.logicgate.farm.domain.Color;
@@ -23,9 +22,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 
 @SpringBootTest
@@ -80,6 +78,7 @@ public class ApplicationTest {
         .collect(Collectors.groupingBy(Animal::getBarn));
 
     barnAnimalMap.forEach((barn, animals) -> {
+      //Switched the assertion here to provide more meaningful message
       assertThat("Barns should not exceed capacity.", animals.size(), lessThanOrEqualTo(barn.getCapacity()));
       assertThat("Animals should match the barn color.",
           animals.stream().anyMatch(animal -> animal.getFavoriteColor() != barn.getColor()), is(false));
@@ -104,6 +103,7 @@ public class ApplicationTest {
           .mapToInt(i -> i)
           .sum();
 
+      //Switched the assertion here to provide more meaningful message
       assertThat("Optimal barns should exist for capacity requirements.",
           totalUnusedCapacity, lessThan(minCapacity));
       assertThat("Animal distribution should maximize free barn space.",
