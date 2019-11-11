@@ -19,6 +19,4 @@ public interface AnimalRepository extends JpaRepository<Animal, Long> {
    * @return List of animals with a favorite color of favoriteColor
    */
   public List<Animal> findByFavoriteColor(Color favoriteColor);
-
-
 }
