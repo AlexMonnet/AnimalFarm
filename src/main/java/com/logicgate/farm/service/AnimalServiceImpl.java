@@ -126,26 +126,26 @@ public class AnimalServiceImpl implements AnimalService {
         });
       }
 
-      //Once the proper number of barns have been established, we redistribute the animals.
-      List<Barn> barnsWithTooManyAnimals = barnToAnimalRelationMap.entrySet().stream().filter((entry) -> { return (entry.getValue().size() > animalsPerBarn); }).map(entry -> entry.getKey()).collect(Collectors.toList());
-      List<Barn> barnsWithTooFewAnimals  = barnToAnimalRelationMap.entrySet().stream().filter((entry) -> { return (entry.getValue().size() < animalsPerBarn); }).map(entry -> entry.getKey()).collect(Collectors.toList());
-
-      barnsWithTooManyAnimals.forEach(barn ->{
-          final List<Animal> animalsInBarn = barnToAnimalRelationMap.get(barn);
-          final List<Animal> overflowAnimals = animalsInBarn.subList(animalsPerBarn, animalsInBarn.size());
-          animalsToRehome.addAll(overflowAnimals);
+      //Pull all the extra animals out of barns with too many animals.
+      barnToAnimalRelationMap.entrySet().stream().filter((entry) -> { return (entry.getValue().size() > animalsPerBarn); }).forEach(entry -> {
+        final List<Animal> animalsInBarn = entry.getValue();
+        final List<Animal> overflowAnimals = animalsInBarn.subList(animalsPerBarn, animalsInBarn.size());
+        animalsToRehome.addAll(overflowAnimals);
       });
 
-      barnsWithTooFewAnimals.forEach(barn ->{
-          final List<Animal> animalsInBarn = barnToAnimalRelationMap.get(barn);
-          final List<Animal> newAnimals = animalsToRehome.subList(0, animalsPerBarn - animalsInBarn.size());
-          newAnimals.forEach(animal -> { animal.setBarn(barn); });
-          animalsInBarn.addAll(newAnimals);
-          //Save all of the animals added to this barn in this foreach
-          animalRepository.saveAll(newAnimals);
-          animalsToRehome.removeAll(newAnimals);
+      //Put the extra animals into barns with too few animals.
+      barnToAnimalRelationMap.entrySet().stream().filter((entry) -> { return (entry.getValue().size() < animalsPerBarn); }).forEach(entry -> {
+        final Barn barn = entry.getKey();
+        final List<Animal> animalsInBarn = entry.getValue();
+        final List<Animal> newAnimals = animalsToRehome.subList(0, animalsPerBarn - animalsInBarn.size());
+        newAnimals.forEach(animal -> { animal.setBarn(barn); });
+        animalsInBarn.addAll(newAnimals);
+        //Save all of the animals added to this barn in this foreach
+        animalRepository.saveAll(newAnimals);
+        animalsToRehome.removeAll(newAnimals);
       });
 
+      //For any remaing animals, put each one in a barn.
       List<Barn> barnsForRemainingAnimals = new ArrayList<>(barnToAnimalRelationMap.keySet()).subList(0, remainderAnimals);
       barnsForRemainingAnimals.forEach(barn ->{
           animalsToRehome.get(barnsForRemainingAnimals.indexOf(barn)).setBarn(barn);
