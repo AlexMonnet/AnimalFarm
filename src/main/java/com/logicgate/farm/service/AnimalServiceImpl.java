@@ -139,7 +139,6 @@ public class AnimalServiceImpl implements AnimalService {
         final List<Animal> animalsInBarn = entry.getValue();
         final List<Animal> newAnimals = animalsToRehome.subList(0, animalsPerBarn - animalsInBarn.size());
         newAnimals.forEach(animal -> { animal.setBarn(barn); });
-        animalsInBarn.addAll(newAnimals);
         //Save all of the animals added to this barn in this foreach
         animalRepository.saveAll(newAnimals);
         animalsToRehome.removeAll(newAnimals);
