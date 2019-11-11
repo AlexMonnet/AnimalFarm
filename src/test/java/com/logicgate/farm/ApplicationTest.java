@@ -1,5 +1,6 @@
 package com.logicgate.farm;
 
+
 import com.logicgate.farm.domain.Animal;
 import com.logicgate.farm.domain.Barn;
 import com.logicgate.farm.domain.Color;
@@ -103,20 +104,10 @@ public class ApplicationTest {
           .mapToInt(i -> i)
           .sum();
 
-      try {
       assertThat("Optimal barns should exist for capacity requirements.",
           totalUnusedCapacity, lessThan(minCapacity));
       assertThat("Animal distribution should maximize free barn space.",
           Collections.max(unusedCapacity) - Collections.min(unusedCapacity), lessThanOrEqualTo(1));
-      } catch(AssertionError e){
-        System.err.println(e);
-        System.err.println("______________________________________");
-        barns.forEach(barn -> {
-          System.err.println(barn.getColor()+ " : " + barnAnimalMap.get(barn).size());
-        });
-        System.err.println("______________________________________");
-        throw e;
-      }
     });
   }
 
