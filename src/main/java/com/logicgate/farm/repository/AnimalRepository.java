@@ -1,7 +1,6 @@
 package com.logicgate.farm.repository;
 
 import com.logicgate.farm.domain.Animal;
-import com.logicgate.farm.domain.Barn;
 import com.logicgate.farm.domain.Color;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -20,14 +19,6 @@ public interface AnimalRepository extends JpaRepository<Animal, Long> {
    * @return List of animals with a favorite color of favoriteColor
    */
   public List<Animal> findByFavoriteColor(Color favoriteColor);
-
-  /**
-   * This method finds all animals that inhabit the barn passed in
-   *  as a parameter. This method is filled out using JPA Query creation
-   * @param barn Animals' barn
-   * @return List of animals that inhabit the barn
-   */
-  public List<Animal> findByBarn(Barn barn);
 
 
 }
