@@ -106,11 +106,11 @@ public class AnimalServiceImpl implements AnimalService {
 
       final int barnCapacity = barns.get(0).getCapacity();
       final int necessaryNumberOfBarns = findNecessaryNumberOfBarns(barnCapacity, animals.size());
-      final Map<Barn, List<Animal>> barnToAnimalRelationMap = animals.stream()
-      .collect(Collectors.groupingBy(Animal::getBarn));
       final int animalsPerBarn = animals.size() / necessaryNumberOfBarns;
       final int remainderAnimals = animals.size() % necessaryNumberOfBarns;
-      List<Animal> animalsToRehome = Collections.synchronizedList(new ArrayList<>());
+      final List<Animal> animalsToRehome = new ArrayList<>();
+      final Map<Barn, List<Animal>> barnToAnimalRelationMap = animals.stream()
+        .collect(Collectors.groupingBy(Animal::getBarn));
 
       //Adjust the number of barns
       while (barnToAnimalRelationMap.size() < necessaryNumberOfBarns){
@@ -118,25 +118,25 @@ public class AnimalServiceImpl implements AnimalService {
       }
 
       if (barnToAnimalRelationMap.size() > necessaryNumberOfBarns){
-        List<Barn> barnsToDelete = new ArrayList<>(barnToAnimalRelationMap.keySet()).subList(necessaryNumberOfBarns, barnToAnimalRelationMap.size());
-        barnsToDelete.forEach(barn -> {
+        barnToAnimalRelationMap.keySet().stream().collect(Collectors.toList())
+        .subList(necessaryNumberOfBarns, barnToAnimalRelationMap.size()).forEach(barn -> {
             barnRepository.delete(barn);
             animalsToRehome.addAll(barnToAnimalRelationMap.get(barn));
             barnToAnimalRelationMap.remove(barn);
-          });
+        });
       }
 
-      //Once the proper number of barns are established, we redistribute the animals.
+      //Once the proper number of barns have been established, we redistribute the animals.
       List<Barn> barnsWithTooManyAnimals = barnToAnimalRelationMap.entrySet().stream().filter((entry) -> { return (entry.getValue().size() > animalsPerBarn); }).map(entry -> entry.getKey()).collect(Collectors.toList());
       List<Barn> barnsWithTooFewAnimals  = barnToAnimalRelationMap.entrySet().stream().filter((entry) -> { return (entry.getValue().size() < animalsPerBarn); }).map(entry -> entry.getKey()).collect(Collectors.toList());
 
-      for(Barn barn : barnsWithTooManyAnimals){
+      barnsWithTooManyAnimals.forEach(barn ->{
           final List<Animal> animalsInBarn = barnToAnimalRelationMap.get(barn);
           final List<Animal> overflowAnimals = animalsInBarn.subList(animalsPerBarn, animalsInBarn.size());
           animalsToRehome.addAll(overflowAnimals);
-      }
+      });
 
-      for(Barn barn : barnsWithTooFewAnimals){
+      barnsWithTooFewAnimals.forEach(barn ->{
           final List<Animal> animalsInBarn = barnToAnimalRelationMap.get(barn);
           final List<Animal> newAnimals = animalsToRehome.subList(0, animalsPerBarn - animalsInBarn.size());
           newAnimals.forEach(animal -> { animal.setBarn(barn); });
@@ -144,12 +144,12 @@ public class AnimalServiceImpl implements AnimalService {
           //Save all of the animals added to this barn in this foreach
           animalRepository.saveAll(newAnimals);
           animalsToRehome.removeAll(newAnimals);
-      }
+      });
 
       List<Barn> barnsForRemainingAnimals = new ArrayList<>(barnToAnimalRelationMap.keySet()).subList(0, remainderAnimals);
-      for(Barn barn : barnsForRemainingAnimals){
+      barnsForRemainingAnimals.forEach(barn ->{
           animalsToRehome.get(barnsForRemainingAnimals.indexOf(barn)).setBarn(barn);
-      }
+      });
 
       //Save the animals that got a home due to being remainders.
       animalRepository.saveAll(animalsToRehome);
@@ -173,33 +173,4 @@ public class AnimalServiceImpl implements AnimalService {
 
     return numberOfBarns;
   }
-
-  /**
-  * This method returns a boolean indicating whether or not
-  *  the animals need to be redistributed amongst the barns
-  * @param barns
-  * @return
-  */
- private boolean doBarnsNeedToBeBalanced(List<Barn> barns, List<Animal> animals) {
-   boolean doBarnsNeedToBeBalanced = false;
-   if(barns.size() == 0 && animals.size() != 0) {
-    doBarnsNeedToBeBalanced = true;
-   } else {
-    final int barnCapacity = barns.get(0).getCapacity();
-    final Map<Barn, List<Animal>> barnToAnimalMap = animals.stream().collect(Collectors.groupingBy(Animal::getBarn));
-
-    final Integer minNumberOfAnimalsInABarn = barnToAnimalMap.values().stream().mapToInt(animalList -> animalList.size()).min().orElse(0);
-    final Integer maxNumberOfAnimalsInABarn = barnToAnimalMap.values().stream().mapToInt(animalList -> animalList.size()).max().orElse(Integer.MAX_VALUE);
-    final Integer sumNumberOfAnimalsInABarn = barnToAnimalMap.values().stream().mapToInt(animalList -> animalList.size()).sum();
-    final Integer freeSpaceInAllBarns       = (barnCapacity * barnToAnimalMap.size()) - sumNumberOfAnimalsInABarn;
-
-    doBarnsNeedToBeBalanced = (maxNumberOfAnimalsInABarn - minNumberOfAnimalsInABarn > 1 ||
-                                maxNumberOfAnimalsInABarn > barnCapacity ||
-                                freeSpaceInAllBarns >= barnCapacity);
-   }
-
-   return doBarnsNeedToBeBalanced;
- }
-
-
 }
